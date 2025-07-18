@@ -1,17 +1,10 @@
+from flask import Flask, request
 import requests
-import time
+import os
 
-TOKEN = '8081564428:AAFZs6K2hki6LOAeQLD47wpcmCZBpViYBGs'
-URL = f"https://api.telegram.org/bot{TOKEN}/"
-
-last_update_id = 0
-
-def get_updates():
-    response = requests.get(URL + "getUpdates", params={"offset": last_update_id + 1})
-    return response.json()
-
-def send_message(chat_id, text):
-    requests.post(URL + "sendMessage", data={"chat_id": chat_id, "text": text})
+app = Flask(__name__)
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
 auto_reply = """👋 أهلاً وسهلاً،
 
@@ -51,11 +44,14 @@ Mathematik / Physik / Chemie / Elektrotechnik / TestAS
 
 Basel Kasem"""
 
-while True:
-    updates = get_updates()
-    if "result" in updates:
-        for update in updates["result"]:
-            last_update_id = update["update_id"]
-            chat_id = update["message"]["chat"]["id"]
-            send_message(chat_id, auto_reply)
-    time.sleep(2)
+@app.route('/', methods=["POST"])
+def webhook():
+    data = request.get_json()
+    if "message" in data and "text" in data["message"]:
+        chat_id = data["message"]["chat"]["id"]
+        requests.post(URL, data={"chat_id": chat_id, "text": auto_reply})
+    return '', 200
+
+@app.route('/', methods=["GET"])
+def index():
+    return "Bot is running!", 200
